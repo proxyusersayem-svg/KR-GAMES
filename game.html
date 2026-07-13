@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block Strike: Core Battle (3D)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Import Three.js via Unpkg -->
+  <script src="https://unpkg.com/three@0.152.0/build/three.min.js"></script>
+</head>
+<body style="margin:0; overflow:hidden;">
+
+  <div id="game-canvas-container">
+    <!-- Three.js target element -->
+
+    <!-- Interactive GUI HUD overlay -->
+    <div class="game-ui-overlay">
+      
+      <!-- Top Section Info -->
+      <div class="hud-top">
+        <div class="hud-panel">
+          <p id="hud-team-indicator" style="color: var(--neon-blue); font-weight:bold;"><i class="fa-solid fa-flag"></i> TEAM BLUE</p>
+          <p id="hud-score">RESOURCES: <span id="res-val" style="color:#ffd700;">$0</span></p>
+        </div>
+        <div class="hud-panel">
+          <p style="color:var(--neon-pink); font-weight:bold;"><i class="fa-solid fa-heart-pulse"></i> HP: <span id="hp-val">100</span></p>
+        </div>
+      </div>
+
+      <!-- Middle Crosshair pointer -->
+      <div style="position:absolute; top:50%; left:50%; width:10px; height:10px; border:2px solid #fff; border-radius:50%; transform:translate(-50%, -50%); pointer-events:none;"></div>
+
+      <!-- Quick Action Controls and Shop Panel -->
+      <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+        <div style="display:flex; gap:10px; margin-bottom:10px; pointer-events:auto;">
+          <button class="btn-cyber" id="shop-trigger-btn" style="padding: 10px 20px;"><i class="fa-solid fa-store"></i> OPEN ARMORY SHOP</button>
+          <button class="btn-cyber" id="camera-mode-btn" style="padding: 10px 20px;"><i class="fa-solid fa-camera"></i> CAMERA MODE</button>
+        </div>
+        
+        <!-- Selection Hotbar -->
+        <div class="hotbar" id="game-hotbar">
+          <div class="hotbar-slot active" data-slot="1">1</div>
+          <div class="hotbar-slot" data-slot="2">2</div>
+          <div class="hotbar-slot" data-slot="3">3</div>
+          <div class="hotbar-slot" data-slot="4">4</div>
+          <div class="hotbar-slot" data-slot="5">5</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Shop Modals -->
+  <div class="modal" id="shop-modal">
+    <h3 class="neon-glow" style="border-bottom: 2px solid var(--neon-blue); padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+      <span>ARMORY STORE</span>
+      <i class="fa-solid fa-times" id="shop-close-btn" style="cursor:pointer; color:var(--neon-pink);"></i>
+    </h3>
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;" id="shop-items-container">
+      <!-- Injected programmatically by inventory.js -->
+    </div>
+  </div>
+
+  <!-- Mobile Controls Overlay (Optional) -->
+  <div id="mobile-controls" style="position: absolute; bottom: 100px; left: 20px; z-index: 50; display: none;">
+    <div id="joystick" style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid var(--neon-blue); border-radius: 50%; position: relative;">
+      <div id="joystick-handle" style="width: 30px; height: 30px; background: var(--neon-blue); border-radius: 50%; position: absolute; top: 25px; left: 25px;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, rtdb, ref, update, onValue, onDisconnect } from "./firebase.js";
+    import { setupInventory } from "./inventory.js";
+    import { setupChat } from "./chat.js";
+
+    // Global ThreeJS Core Setup variables
+    let scene, camera, renderer, blocks = [];
+    let player, moveDir = { forward:0, back:0, left:0, right:0 };
+    let selectedBlockType = 0x00f0ff; // Default block color cyan
+    let resourceCoins = 10;
+    let cameraMode = 'third-person';
+
+    // Parse matchmaking parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get("room") || "local_practice";
+
+    function init3D() {
+      const container = document.getElementById("game-canvas-container");
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x050b18);
+      
+      // Dynamic Day/Night lighting properties
+      scene.fog = new THREE.FogExp2(0x050b18, 0.015);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      // Light creation setup
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+      sun.position.set(50, 100, 50);
+      sun.castShadow = true;
+      scene.add(sun);
+
+      // Generate World Base Floating Islands
+      buildFloatingIsland(0, 0, 0, 15, 0x111e35); // Main Spawn Hub
+      buildFloatingIsland(-25, 0, 0, 8, 0x0f172a); // Side Island Left
+      buildFloatingIsland(25, 0, 0, 8, 0x0f172a); // Side Island Right
+
+      // Create Energy Core target center
+      createEnergyCore(0, 3, 0);
+
+      // Build User Character
+      const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2);
+      const playerMat = new THREE.MeshLambertMaterial({ color: 0x3b82f6 });
+      player = new THREE.Mesh(playerGeo, playerMat);
+      player.position.set(0, 4, 10);
+      scene.add(player);
+
+      // Listeners
+      window.addEventListener('resize', onWindowResize);
+      setupControls();
+      animate();
+    }
+
+    function buildFloatingIsland(cx, cy, cz, radius, colorHex) {
+      for (let x = -radius; x <= radius; x++) {
+        for (let z = -radius; z <= radius; z++) {
+          if (x*x + z*z <= radius*radius) {
+            const h = 1 + Math.floor(Math.random() * 2);
+            for (let y = 0; y < h; y++) {
+              const geo = new THREE.BoxGeometry(1.9, 1.9, 1.9);
+              const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+              const m = new THREE.Mesh(geo, mat);
+              m.position.set(cx + x*2, cy - y*2, cz + z*2);
+              scene.add(m);
+              blocks.push(m);
+            }
+          }
+        }
+      }
+    }
+
+    function createEnergyCore(x, y, z) {
+      const coreGeo = new THREE.IcosahedronGeometry(2, 1);
+      const coreMat = new THREE.MeshPhongMaterial({
+        color: 0x00f0ff,
+        emissive: 0x00a0ff,
+        shininess: 100,
+        wireframe: true
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.position.set(x, y, z);
+      scene.add(core);
+
+      // Continuous rotation of core
+      setInterval(() => {
+        core.rotation.y += 0.02;
+        core.rotation.x += 0.01;
+      }, 30);
+    }
+
+    function setupControls() {
+      // Desktop Keyboard Controls
+      window.addEventListener('keydown', (e) => {
+        if(e.code === 'KeyW' || e.code === 'ArrowUp') moveDir.forward = 1;
+        if(e.code === 'KeyS' || e.code === 'ArrowDown') moveDir.back = 1;
+        if(e.code === 'KeyA' || e.code === 'ArrowLeft') moveDir.left = 1;
+        if(e.code === 'KeyD' || e.code === 'ArrowRight') moveDir.right = 1;
+
+        // Interaction Spacebar to place block
+        if(e.code === 'Space') placeBlockAction();
+        // Shift key triggers local block demolition
+        if(e.code === 'ShiftLeft') destroyBlockAction();
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if(e.code === 'KeyW' || e.code === 'ArrowUp') moveDir.forward = 0;
+        if(e.code === 'KeyS' || e.code === 'ArrowDown') moveDir.back = 0;
+        if(e.code === 'KeyA' || e.code === 'ArrowLeft') moveDir.left = 0;
+        if(e.code === 'KeyD' || e.code === 'ArrowRight') moveDir.right = 0;
+      });
+
+      // Mouse Look / Pointer Rotation configuration
+      let yaw = 0;
+      let pitch = 0;
+      window.addEventListener('mousemove', (e) => {
+        if(document.pointerLockElement === document.body) {
+          yaw -= e.movementX * 0.002;
+          pitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, pitch - e.movementY * 0.002));
+        }
+      });
+
+      document.body.addEventListener('click', () => {
+        document.body.requestPointerLock();
+      });
+
+      // Toggle Camera Mode
+      document.getElementById('camera-mode-btn').addEventListener('click', () => {
+        cameraMode = cameraMode === 'third-person' ? 'first-person' : 'third-person';
+      });
+    }
+
+    function placeBlockAction() {
+      // Create Block on character path
+      const geo = new THREE.BoxGeometry(2, 2, 2);
+      const mat = new THREE.MeshLambertMaterial({ color: selectedBlockType });
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(
+        Math.round(player.position.x / 2) * 2,
+        Math.round(player.position.y / 2) * 2 - 2,
+        Math.round(player.position.z / 2) * 2
+      );
+      scene.add(m);
+      blocks.push(m);
+
+      // Subtract resource coin if available
+      if(resourceCoins > 0) {
+        resourceCoins--;
+        document.getElementById('res-val').textContent = `$${resourceCoins}`;
+      }
+    }
+
+    function destroyBlockAction() {
+      if(blocks.length > 0) {
+        const lastBlock = blocks.pop();
+        scene.remove(lastBlock);
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Simple character physics & relative layout calculations
+      const speed = 0.15;
+      if (moveDir.forward) player.translateZ(-speed);
+      if (moveDir.back) player.translateZ(speed);
+      if (moveDir.left) player.translateX(-speed);
+      if (moveDir.right) player.translateX(speed);
+
+      // Camera Attachment logic (First/Third-person)
+      if (cameraMode === 'third-person') {
+        camera.position.set(player.position.x, player.position.y + 6, player.position.z + 14);
+        camera.lookAt(player.position);
+      } else {
+        camera.position.set(player.position.x, player.position.y + 1, player.position.z);
+        camera.rotation.copy(player.rotation);
+      }
+
+      // Automatically generate active generators logic resources
+      if(Math.random() < 0.005) {
+        resourceCoins += 1;
+        document.getElementById('res-val').textContent = `$${resourceCoins}`;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Initialize systems
+    init3D();
+    setupInventory((color) => {
+      selectedBlockType = color;
+    });
+  </script>
+</body>
+</html>

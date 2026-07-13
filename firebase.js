@@ -11,7 +11,7 @@ const firebaseConfig = {
   projectId: "kr-games",
   storageBucket: "kr-games.appspot.com",
   messagingSenderId: "882062097165",
-  appId: "YOUR_APP_ID",
+  appId: "1:882062097165:android:3eb7501b29a3d54b06ce44",
   databaseURL: "https://kr-games-default-rtdb.firebaseio.com"
 };
 

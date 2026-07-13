@@ -5,64 +5,168 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KR GAMES - Database Authentication</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
+<body style="display:flex; justify-content:center; align-items:center; min-height:100vh; background-color: var(--bg-primary);">
 
-  <div class="neon-border" style="background:var(--bg-secondary); padding:40px; border-radius:10px; width:100%; max-width:450px; margin: 20px;">
-    <h2 class="neon-glow" style="text-align:center; font-size:1.8rem; margin-bottom:10px;">KR SECURE PORTAL</h2>
-    <p style="text-align:center; color:var(--text-muted); margin-bottom:30px;">Access your player registry profiles</p>
+  <div class="neon-border" style="background:var(--bg-secondary); padding:40px; border-radius:10px; width:100%; max-width:450px; margin: 20px; transition: var(--transition-smooth);">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <i class="fa-solid fa-shield-halved neon-glow" style="color: var(--neon-blue); font-size: 2.5rem; margin-bottom: 15px;"></i>
+      <h2 id="form-title" class="neon-glow" style="font-size:1.8rem; margin-bottom:5px;">KR SECURE PORTAL</h2>
+      <p id="form-sub" style="color:var(--text-muted);">Access your player registry profiles</p>
+    </div>
 
     <form id="auth-form" style="display:flex; flex-direction:column; gap:20px;">
-      <div>
-        <label style="display:block; margin-bottom:8px; text-transform:uppercase; font-size:0.8rem;">Email Address</label>
-        <input type="email" id="auth-email" required style="width:100%; background:var(--bg-primary); border:1px solid rgba(0,240,255,0.2); padding:12px; border-radius:4px; color:#fff; font-family:var(--font-main);">
-      </div>
-      <div>
-        <label style="display:block; margin-bottom:8px; text-transform:uppercase; font-size:0.8rem;">Security Code (Password)</label>
-        <input type="password" id="auth-password" required style="width:100%; background:var(--bg-primary); border:1px solid rgba(0,240,255,0.2); padding:12px; border-radius:4px; color:#fff; font-family:var(--font-main);">
+      
+      <!-- Username Field (Starts Hidden, only toggled during sign-up) -->
+      <div id="username-container" style="display:none;">
+        <label style="display:block; margin-bottom:8px; text-transform:uppercase; font-size:0.8rem; letter-spacing: 1px;">Desired Username</label>
+        <div style="position:relative;">
+          <input type="text" id="auth-username" placeholder="e.g., CyberKnight" style="width:100%; background:var(--bg-primary); border:1px solid rgba(0,240,255,0.2); padding:12px 12px 12px 40px; border-radius:4px; color:#fff; font-family:var(--font-main);">
+          <i class="fa-solid fa-user" style="position:absolute; left:15px; top:15px; color:rgba(255,255,255,0.3);"></i>
+        </div>
       </div>
 
-      <button type="submit" class="btn-cyber" id="auth-submit-btn" style="width:100%; margin-top:10px;">SIGN IN</button>
+      <!-- Email Field -->
+      <div>
+        <label style="display:block; margin-bottom:8px; text-transform:uppercase; font-size:0.8rem; letter-spacing: 1px;">Email Address</label>
+        <div style="position:relative;">
+          <input type="email" id="auth-email" required placeholder="name@domain.com" style="width:100%; background:var(--bg-primary); border:1px solid rgba(0,240,255,0.2); padding:12px 12px 12px 40px; border-radius:4px; color:#fff; font-family:var(--font-main);">
+          <i class="fa-solid fa-envelope" style="position:absolute; left:15px; top:15px; color:rgba(255,255,255,0.3);"></i>
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div>
+        <label style="display:block; margin-bottom:8px; text-transform:uppercase; font-size:0.8rem; letter-spacing: 1px;">Security Code (Password)</label>
+        <div style="position:relative;">
+          <input type="password" id="auth-password" required placeholder="••••••••" style="width:100%; background:var(--bg-primary); border:1px solid rgba(0,240,255,0.2); padding:12px 12px 12px 40px; border-radius:4px; color:#fff; font-family:var(--font-main);">
+          <i class="fa-solid fa-lock" style="position:absolute; left:15px; top:15px; color:rgba(255,255,255,0.3);"></i>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-cyber" id="auth-submit-btn" style="width:100%; margin-top:10px; display:flex; justify-content:center; align-items:center; gap:10px;">
+        <span>SIGN IN</span> <i class="fa-solid fa-right-to-bracket"></i>
+      </button>
     </form>
 
-    <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:0.8rem;">
-      <span style="color:var(--text-muted); cursor:pointer;" id="switch-mode-text">Need an online registry account? Sign Up</span>
+    <div style="display:flex; justify-content:center; margin-top:25px; font-size:0.85rem;">
+      <span style="color:var(--neon-blue); cursor:pointer; text-decoration: underline; font-family:var(--font-cyber);" id="switch-mode-text">Need an online registry account? Sign Up</span>
     </div>
   </div>
 
   <script type="module">
-    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "./firebase.js";
-    import { notify } from "./app.js";
+    import { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, doc, setDoc } from "./firebase.js";
 
-    let mode = "login";
     const authForm = document.getElementById("auth-form");
     const switchBtn = document.getElementById("switch-mode-text");
     const submitBtn = document.getElementById("auth-submit-btn");
+    const usernameContainer = document.getElementById("username-container");
+    const usernameInput = document.getElementById("auth-username");
+    const formTitle = document.getElementById("form-title");
+    const formSub = document.getElementById("form-sub");
 
+    let mode = "login";
+
+    // Toggle dynamic input fields between signup/signin states
     switchBtn.addEventListener("click", () => {
-      mode = mode === "login" ? "signup" : "login";
-      submitBtn.textContent = mode === "login" ? "SIGN IN" : "REGISTER PROFILE";
-      switchBtn.textContent = mode === "login" ? "Need an online registry account? Sign Up" : "Have an operational ID? Sign In";
+      if (mode === "login") {
+        mode = "signup";
+        submitBtn.innerHTML = `<span>REGISTER PROFILE</span> <i class="fa-solid fa-user-plus"></i>`;
+        switchBtn.textContent = "Have an operational ID? Sign In";
+        formTitle.textContent = "KR REGISTRY CREATION";
+        formSub.textContent = "Register your identity parameters";
+        usernameContainer.style.display = "block";
+        usernameInput.required = true;
+      } else {
+        mode = "login";
+        submitBtn.innerHTML = `<span>SIGN IN</span> <i class="fa-solid fa-right-to-bracket"></i>`;
+        switchBtn.textContent = "Need an online registry account? Sign Up";
+        formTitle.textContent = "KR SECURE PORTAL";
+        formSub.textContent = "Access your player registry profiles";
+        usernameContainer.style.display = "none";
+        usernameInput.required = false;
+      }
     });
 
+    // Handle Form submissions securely
     authForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("auth-email").value;
       const pass = document.getElementById("auth-password").value;
+      const username = usernameInput.value.trim();
+
+      submitBtn.disabled = true;
+      const originalBtnHTML = submitBtn.innerHTML;
+      submitBtn.innerHTML = `<span>PROCESSING...</span> <i class="fa-solid fa-circle-notch fa-spin"></i>`;
 
       try {
         if (mode === "login") {
+          // Process secure direct user login
           await signInWithEmailAndPassword(auth, email, pass);
-          window.location.href = "index.html";
+          showNotification("Access authorized. Redirecting...", "success");
+          setTimeout(() => window.location.href = "index.html", 1000);
         } else {
-          await createUserWithEmailAndPassword(auth, email, pass);
-          notify("Account created successfully", "success");
+          // Validate name parameters before firing server requests
+          if (username.length < 3) {
+            throw new Error("Registry profile name must be at least 3 characters.");
+          }
+
+          // 1. Create authentication entry
+          const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+          const user = userCredential.user;
+
+          // 2. Map global metadata displayName
+          await updateProfile(user, { displayName: username });
+
+          // 3. Document write setup inside Firestore to initialize database stats
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            displayName: username,
+            email: email,
+            rank: "RECRUIT I",
+            xp: 150,
+            nextLevelXp: 1000,
+            wins: 0,
+            kills: 0,
+            cores: 0,
+            createdAt: Date.now()
+          });
+
+          showNotification("Secure profile registered successfully!", "success");
           setTimeout(() => window.location.href = "index.html", 1500);
         }
       } catch (err) {
-        notify(err.message, "error");
+        showNotification(err.message, "error");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
       }
     });
+
+    // Render localized fallback warning boxes to bypass import dependencies
+    function showNotification(message, type = "info") {
+      const alertEl = document.createElement("div");
+      alertEl.style.position = "fixed";
+      alertEl.style.bottom = "20px";
+      alertEl.style.right = "20px";
+      alertEl.style.backgroundColor = type === "error" ? "rgba(220, 38, 38, 0.9)" : "rgba(11, 21, 40, 0.9)";
+      alertEl.style.border = `1px solid ${type === "error" ? "var(--neon-pink)" : "var(--neon-blue)"}`;
+      alertEl.style.boxShadow = "var(--glow-shadow)";
+      alertEl.style.color = "var(--text-main)";
+      alertEl.style.padding = "12px 24px";
+      alertEl.style.borderRadius = "4px";
+      alertEl.style.fontFamily = "var(--font-cyber)";
+      alertEl.style.fontSize = "0.85rem";
+      alertEl.style.zIndex = "99999";
+      alertEl.style.transition = "opacity 0.3s ease";
+      alertEl.textContent = message;
+
+      document.body.appendChild(alertEl);
+      setTimeout(() => {
+        alertEl.style.opacity = "0";
+        setTimeout(() => alertEl.remove(), 300);
+      }, 3500);
+    }
   </script>
 </body>
 </html>

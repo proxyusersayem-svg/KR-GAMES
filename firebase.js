@@ -6,11 +6,11 @@ import { getDatabase, ref, set, onValue, push, update, remove, onDisconnect } fr
 
 // REPLACE WITH YOUR FIREBASE PROJECT CONFIGURATION
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "kr-games.firebaseapp.com",
+  apiKey: "AIzaSyBchtm5yS1ZuW1b-5DWAIncTysOv09bYX0",
+  authDomain: "https://proxyusersayem-svg.github.io/KR-GAMES/",
   projectId: "kr-games",
   storageBucket: "kr-games.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
+  messagingSenderId: "1:882062097165:android:3eb7501b29a3d54b06ce44",
   appId: "YOUR_APP_ID",
   databaseURL: "https://kr-games-default-rtdb.firebaseio.com"
 };

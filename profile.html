@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KR GAMES - User Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <i class="fa-solid fa-cube neon-glow" style="color: var(--neon-blue); font-size: 2rem;"></i>
+      <div class="logo-text">KR<span>GAMES</span></div>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="index.html">HOME</a></li>
+        <li><a href="rooms.html">MULTIPLAYER</a></li>
+        <li><a href="profile.html" class="active">DASHBOARD</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    <h2 class="neon-glow" style="margin-bottom:20px;">USER REGISTRY</h2>
+
+    <div class="profile-grid">
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="avatar-wrapper">
+          <img id="profile-avatar" src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=250&auto=format&fit=crop" style="width:100%; height:100%; object-fit:cover;">
+        </div>
+        <h3 id="profile-username" class="neon-glow">LOADING USER...</h3>
+        <p style="color:var(--neon-blue); font-family:var(--font-cyber); font-size:0.9rem; margin-top:5px;" id="profile-rank">RANK: CYBER ELITE V</p>
+        
+        <div class="xp-bar-container">
+          <div class="xp-bar" id="profile-xp-bar"></div>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted);" id="profile-xp-text">XP Progress: 3,250 / 5,000</p>
+      </div>
+
+      <!-- General Statistics & Achievements -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="profile-card" style="text-align:left;">
+          <h3 style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:15px;"><i class="fa-solid fa-chart-line" style="margin-right:10px;"></i>STATISTICAL SUMMARY</h3>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; text-align:center;">
+            <div style="background:var(--bg-primary); padding:15px; border-radius:6px; border:1px solid rgba(0,240,255,0.1);">
+              <h4 id="stat-wins">42</h4>
+              <p style="color:var(--text-muted); font-size:0.8rem;">WINS</p>
+            </div>
+            <div style="background:var(--bg-primary); padding:15px; border-radius:6px; border:1px solid rgba(0,240,255,0.1);">
+              <h4 id="stat-kills">389</h4>
+              <p style="color:var(--text-muted); font-size:0.8rem;">ELIMINATIONS</p>
+            </div>
+            <div style="background:var(--bg-primary); padding:15px; border-radius:6px; border:1px solid rgba(0,240,255,0.1);">
+              <h4 id="stat-cores">87</h4>
+              <p style="color:var(--text-muted); font-size:0.8rem;">CORES SMASHED</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-card" style="text-align:left;">
+          <h3 style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:15px;"><i class="fa-solid fa-trophy" style="margin-right:10px; color:#ffd700;"></i>ACHIEVEMENTS</h3>
+          <div style="display:flex; flex-direction:column; gap:10px;" id="profile-achievements">
+            <div style="display:flex; justify-content:space-between; background:var(--bg-primary); padding:10px; border-radius:6px; align-items:center;">
+              <div>
+                <h4 style="font-size:0.9rem;">Core Smasher</h4>
+                <p style="font-size:0.75rem; color:var(--text-muted);">Destroyed 50 Energy Cores in matches</p>
+              </div>
+              <i class="fa-solid fa-circle-check" style="color:var(--neon-blue);"></i>
+            </div>
+            <div style="display:flex; justify-content:space-between; background:var(--bg-primary); padding:10px; border-radius:6px; align-items:center;">
+              <div>
+                <h4 style="font-size:0.9rem;">Skyward Architect</h4>
+                <p style="font-size:0.75rem; color:var(--text-muted);">Constructed 1,000 blocks across match bridges</p>
+              </div>
+              <i class="fa-solid fa-circle-check" style="color:var(--neon-blue);"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { auth, db, getDoc, doc } from "./firebase.js";
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      
+      const usernameEl = document.getElementById("profile-username");
+      usernameEl.textContent = user.displayName || user.email.split("@")[0].toUpperCase();
+
+      // Attempt to load from Firestore, otherwise use defaults
+      try {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          document.getElementById("profile-rank").textContent = `RANK: ${data.rank || "RECRUIT"}`;
+          document.getElementById("profile-xp-text").textContent = `XP Progress: ${data.xp || 100} / ${data.nextLevelXp || 1000}`;
+          const ratio = ((data.xp || 100) / (data.nextLevelXp || 1000)) * 100;
+          document.getElementById("profile-xp-bar").style.width = `${ratio}%`;
+          
+          document.getElementById("stat-wins").textContent = data.wins || 0;
+          document.getElementById("stat-kills").textContent = data.kills || 0;
+          document.getElementById("stat-cores").textContent = data.cores || 0;
+        }
+      } catch (e) {
+        console.warn("Could not retrieve Firestore stats; loaded fallback data profile defaults.");
+      }
+    });
+  </script>
+</body>
+</html>

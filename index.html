@@ -1,66 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KR GAMES - Premium Gaming Hub</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KR GAMES BedWars</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/shop.css">
+    <link rel="stylesheet" href="css/inventory.css">
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.147.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.147.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
-
-  <!-- Loading Animation Overlay -->
-  <div id="global-loader" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-primary); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-    <div style="border: 4px solid var(--bg-secondary); border-top: 4px solid var(--neon-blue); border-radius:50%; width:70px; height:70px; animation:spin 1s linear infinite; box-shadow: var(--glow-shadow);"></div>
-    <h1 class="neon-glow" style="margin-top:20px; font-family:var(--font-cyber); font-size:1.5rem; letter-spacing:4px;">INITIALIZING KR GAMES</h1>
-  </div>
-
-  <!-- Header -->
-  <header>
-    <div class="logo-container">
-      <i class="fa-solid fa-cube neon-glow" style="color: var(--neon-blue); font-size: 2rem;"></i>
-      <div class="logo-text">KR<span>GAMES</span></div>
-    </div>
-    <nav>
-      <ul>
-        <li><a href="index.html" class="active">HOME</a></li>
-        <li><a href="rooms.html">MULTIPLAYER</a></li>
-        <li><a href="profile.html">DASHBOARD</a></li>
-      </ul>
-    </nav>
-    <div class="nav-buttons">
-      <div id="nav-search-wrapper" style="position:relative;">
-        <input type="text" id="nav-search" placeholder="Search games..." style="background:var(--bg-secondary); border:1px solid rgba(255,255,255,0.1); padding:8px 30px 8px 12px; border-radius:15px; color:#fff; font-family:var(--font-sub);">
-        <i class="fa-solid fa-search" style="position:absolute; right:10px; top:11px; font-size:0.8rem; color:var(--text-muted);"></i>
-      </div>
-      <a href="login.html" class="btn-cyber" id="login-nav-btn" style="padding: 8px 16px; font-size: 0.8rem;">LOGIN</a>
-      <span id="user-display-name" class="neon-glow" style="display:none; font-family:var(--font-cyber); font-weight:bold;"></span>
-    </div>
-  </header>
-
-  <!-- Hero Content -->
-  <main class="main-container">
-    <div class="hero-banner">
-      <h1 class="neon-glow">NEXT-GEN WEB MULTIPLAYER</h1>
-      <p style="font-size: 1.2rem; max-width: 600px; color: var(--text-muted);">Experience original block-building team battles. Compete globally with optimized networking, dynamic combat systems, and custom shop integrations.</p>
-      <div>
-        <a href="rooms.html" class="btn-cyber">BATTLE NOW</a>
-      </div>
+    <!-- View 1: Main Menu -->
+    <div id="menu-view" class="view active">
+        <div class="menu-container">
+            <h1 class="logo">KR GAMES <span class="accent">BEDWARS</span></h1>
+            <div class="menu-buttons">
+                <button id="btn-offline" class="btn primary">Offline Mode (VS Bots)</button>
+                <button id="btn-online" class="btn secondary">Online Multiplayer</button>
+                <button id="btn-settings" class="btn tertiary">Settings</button>
+            </div>
+            <div class="profile-summary" id="profile-widget">
+                <p>Level: <span id="user-level">1</span> | Coins: <span id="user-coins">0</span></p>
+            </div>
+        </div>
     </div>
 
-    <!-- Active Categories and Grid -->
-    <h2 style="margin-bottom: 20px; border-left: 4px solid var(--neon-blue); padding-left: 10px;">FEATURED GAMES</h2>
-    <div class="game-grid" id="featured-games-container">
-      <!-- Dynamically Injected Game Cards via app.js -->
+    <!-- View 2: Room Lobby -->
+    <div id="room-view" class="view">
+        <div class="room-container">
+            <h2>Game Lobby: <span id="lobby-room-id">XXXX</span></h2>
+            <div class="lobby-panels">
+                <div class="panel player-list-panel">
+                    <h3>Players</h3>
+                    <ul id="lobby-players-list"></ul>
+                </div>
+                <div class="panel settings-panel">
+                    <h3>Match Rules</h3>
+                    <label>Map: 
+                        <select id="lobby-map-select">
+                            <option value="floating_arch">Floating Archipelago</option>
+                            <option value="quad_void">Quad Void Gates</option>
+                        </select>
+                    </label>
+                    <label>Bot Count: 
+                        <input type="number" id="lobby-bots-count" min="0" max="12" value="4">
+                    </label>
+                    <label>Difficulty: 
+                        <select id="lobby-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="pro">Pro</option>
+                        </select>
+                    </label>
+                    <button id="btn-start-match" class="btn primary">Start Game</button>
+                </div>
+            </div>
+            <button id="btn-leave-room" class="btn danger">Leave Room</button>
+        </div>
     </div>
-  </main>
 
-  <style>
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-  <script type="module" src="app.js"></script>
+    <!-- View 3: Game Screen -->
+    <div id="game-view" class="view">
+        <div id="canvas-container"></div>
+        <div id="crosshair"></div>
+
+        <!-- HUD Layer -->
+        <div class="hud-overlay">
+            <div class="hud-top-bar">
+                <div class="scoreboard-card" id="scoreboard">
+                    <div class="scoreboard-row" data-team="red">
+                        <span class="status-indicator alive" id="indicator-red"></span> Red Bed: <span id="score-red">OK</span>
+                    </div>
+                    <div class="scoreboard-row" data-team="blue">
+                        <span class="status-indicator alive" id="indicator-blue"></span> Blue Bed: <span id="score-blue">OK</span>
+                    </div>
+                    <div class="scoreboard-row" data-team="green">
+                        <span class="status-indicator alive" id="indicator-green"></span> Green Bed: <span id="score-green">OK</span>
+                    </div>
+                    <div class="scoreboard-row" data-team="yellow">
+                        <span class="status-indicator alive" id="indicator-yellow"></span> Yellow Bed: <span id="score-yellow">OK</span>
+                    </div>
+                </div>
+                <div class="killfeed-container" id="killfeed"></div>
+            </div>
+
+            <div class="hud-bottom-bar">
+                <div class="health-container">
+                    <div class="health-bar-fill" id="health-bar" style="width: 100%;"></div>
+                    <span class="health-text" id="health-text">100 / 100</span>
+                </div>
+                <div class="resource-container">
+                    <span class="res iron">Iron: <span id="count-iron">0</span></span>
+                    <span class="res gold">Gold: <span id="count-gold">0</span></span>
+                    <span class="res diamond">Dia: <span id="count-diamond">0</span></span>
+                    <span class="res emerald">Em: <span id="count-emerald">0</span></span>
+                </div>
+                <div class="hotbar" id="hotbar">
+                    <div class="hotbar-slot selected" data-index="0" data-item="sword_wood">Sword</div>
+                    <div class="hotbar-slot" data-index="1" data-item="block_clay">Blocks</div>
+                    <div class="hotbar-slot" data-index="2" data-item="pickaxe_wood">Pickaxe</div>
+                    <div class="hotbar-slot" data-index="3" data-item="shears">Shears</div>
+                    <div class="hotbar-slot" data-index="4" data-item="">Empty</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Modal -->
+        <div class="modal" id="shop-modal">
+            <div class="modal-content shop-content">
+                <h2>Merchant Shop</h2>
+                <div class="shop-grid">
+                    <div class="shop-item" data-id="block_clay" data-cost="4" data-currency="iron">
+                        <div class="shop-icon block-clay-icon"></div>
+                        <div class="shop-details">
+                            <span class="item-name">Clay Block (x16)</span>
+                            <span class="item-cost">4 Iron</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-id="sword_iron" data-cost="7" data-currency="gold">
+                        <div class="shop-icon sword-iron-icon"></div>
+                        <div class="shop-details">
+                            <span class="item-name">Iron Sword</span>
+                            <span class="item-cost">7 Gold</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-id="armor_iron" data-cost="12" data-currency="iron">
+                        <div class="shop-icon armor-iron-icon"></div>
+                        <div class="shop-details">
+                            <span class="item-name">Iron Armor Set</span>
+                            <span class="item-cost">12 Iron</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-id="teleporter_pearl" data-cost="4" data-currency="emerald">
+                        <div class="shop-icon pearl-icon"></div>
+                        <div class="shop-details">
+                            <span class="item-name">Recall Stone</span>
+                            <span class="item-cost">4 Emeralds</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn close-btn" id="btn-close-shop">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay for Settings Modals -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <label>Render Quality: 
+                <select id="setting-graphics">
+                    <option value="high">High</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="low">Low (60FPS Targeted)</option>
+                </select>
+            </label>
+            <label>Mouse Sensitivity: 
+                <input type="range" id="setting-sensitivity" min="0.5" max="3.0" step="0.1" value="1.5">
+            </label>
+            <button id="btn-save-settings" class="btn primary">Save Changes</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -6,62 +6,133 @@ class AppController {
         this.currentView = 'menu-view';
         this.gameEngine = null;
         this.saveSystem = new SaveSystem();
-        this.initDOM();
+
+        window.addEventListener('DOMContentLoaded', () => {
+            this.initDOM();
+        });
     }
 
     initDOM() {
-        // Core View Triggers
-        document.getElementById('btn-offline').addEventListener('click', () => this.switchView('room-view'));
-        document.getElementById('btn-settings').addEventListener('click', () => {
-            document.getElementById('settings-modal').classList.add('active');
-        });
-        document.getElementById('btn-save-settings').addEventListener('click', () => {
-            document.getElementById('settings-modal').classList.remove('active');
-        });
 
-        // Room Controls
-        document.getElementById('btn-start-match').addEventListener('click', () => {
-            this.switchView('game-view');
-            this.startGame();
-        });
+        // ==========================
+        // OFFLINE PLAY
+        // ==========================
+        const offlineBtn = document.getElementById('btn-offline');
 
-        document.getElementById('btn-leave-room').addEventListener('click', () => {
-            this.switchView('menu-view');
-        });
+        if (offlineBtn) {
+            offlineBtn.addEventListener('click', () => {
+                this.switchView('room-view');
+            });
+        }
 
-        // Initialize display stats
+        // ==========================
+        // ONLINE PLAY
+        // ==========================
+        const onlineBtn = document.getElementById('btn-online');
+
+        if (onlineBtn) {
+            onlineBtn.addEventListener('click', () => {
+                this.switchView('room-view');
+            });
+        }
+
+        // ==========================
+        // SETTINGS
+        // ==========================
+        const settingsBtn = document.getElementById('btn-settings-toggle');
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                document.getElementById('settings-modal').classList.add('active');
+            });
+        }
+
+        const saveBtn = document.getElementById('btn-save-settings');
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                document.getElementById('settings-modal').classList.remove('active');
+            });
+        }
+
+        // ==========================
+        // START MATCH
+        // ==========================
+        const startBtn = document.getElementById('btn-start-match');
+
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                this.switchView('game-view');
+                this.startGame();
+            });
+        }
+
+        // ==========================
+        // LEAVE ROOM
+        // ==========================
+        const leaveBtn = document.getElementById('btn-leave-room');
+
+        if (leaveBtn) {
+            leaveBtn.addEventListener('click', () => {
+                this.switchView('menu-view');
+            });
+        }
+
+        // ==========================
+        // PROFILE
+        // ==========================
         const profile = this.saveSystem.getProfile();
-        document.getElementById('user-level').innerText = profile.level;
-        document.getElementById('user-coins').innerText = profile.coins;
+
+        const coins = document.getElementById('hdr-coins');
+        if (coins) coins.innerText = profile.coins ?? 0;
+
+        const diamonds = document.getElementById('hdr-diamonds');
+        if (diamonds) diamonds.innerText = profile.diamonds ?? 0;
     }
 
     switchView(viewId) {
-        document.getElementById(this.currentView).classList.remove('active');
-        document.getElementById(viewId).classList.add('active');
+
+        const current = document.getElementById(this.currentView);
+        const next = document.getElementById(viewId);
+
+        if (current) current.classList.remove('active');
+        if (next) next.classList.add('active');
+
         this.currentView = viewId;
     }
 
     startGame() {
-        const difficulty = document.getElementById('lobby-difficulty').value;
-        const botsCount = parseInt(document.getElementById('lobby-bots-count').value, 10);
-        
-        // Fire up clean instance
+
+        const difficulty =
+            document.getElementById('lobby-difficulty')?.value || 'normal';
+
+        const botsCount =
+            parseInt(document.getElementById('lobby-bots-count')?.value || 4);
+
         const container = document.getElementById('canvas-container');
-        container.innerHTML = ''; // Clean old context instances
-        
+
+        if (!container) {
+            console.error('Canvas container not found!');
+            return;
+        }
+
+        container.innerHTML = '';
+
         this.gameEngine = new GameEngine(container, {
             difficulty,
             botsCount,
             onGameOver: (winner) => {
-                alert(`Game Over! Team Winner: ${winner.toUpperCase()}`);
+                alert(`Winner: ${winner}`);
                 this.switchView('menu-view');
-                if (this.gameEngine) this.gameEngine.destroy();
+
+                if (this.gameEngine) {
+                    this.gameEngine.destroy();
+                }
             }
         });
+
         this.gameEngine.start();
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    new AppController();
-});
+new AppController();
